@@ -110,11 +110,12 @@ def auto_scroll():
     Cette fonction ne prend aucun paramètre et ne retourne rien.
     Elle utilise un script HTML pour réinitialiser le défilement de la fenêtre.
     """
+    # section
     components.html(
         f"""
             <p>{st.session_state["counter"]}</p>
             <script>
-                window.parent.document.querySelector('section.main').scrollTo(0, 0);
+                window.parent.document.querySelector('.main').scrollTo(0, 0);
             </script>
         """,
         height=0
@@ -321,9 +322,10 @@ def get_clicked_act_dirct(
     actor_actress = 'Acteur' if peo["gender"] == 2 else 'Actrice'
     import pprint
     pprint.pprint(peo)
+    # target="_blank"
     content = f"""
         <div style="text-align: center;">
-            <a href="{peo['biography']}" target="_blank" id="{api_list[nb]}">
+            <a href="{peo['biography']}" id="{api_list[nb]}">
                 <img width="{str(width)}px" height="{str(height)}px" src="{peo['image']}"
                     style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
             </a>
@@ -348,6 +350,7 @@ def afficher_details_film(df: pd.DataFrame):
     Cette fonction ne retourne rien mais utilise Streamlit pour afficher des détails tels que
     le titre, le genre, le réalisateur, et les acteurs du film.
     """
+    auto_scroll()
     col1, col2 = st.columns([1, 3])
     col1.image(get_info(df, "image"), use_column_width = True)
     columns = [
