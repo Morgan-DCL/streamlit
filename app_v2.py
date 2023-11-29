@@ -1,22 +1,16 @@
-import streamlit as st
-import asyncio
 import pandas as pd
-
 from tools_app import (
-    clean_dup,
-    auto_scroll,
-    get_info,
-    knn_algo,
-    infos_button,
     afficher_details_film,
     afficher_top_genres,
+    auto_scroll,
+    clean_dup,
     get_clicked,
-    get_actors_dict,
-    get_directors_dict,
-    fetch_persons_bio,
-    get_clicked_act_dirct,
+    get_info,
+    infos_button,
+    knn_algo,
 )
 
+import streamlit as st
 
 # Configuration de la page
 st.set_page_config(
@@ -25,7 +19,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
     layout="wide",
 )
-
 # Supprime les boutons fullscreen des images de l"app.
 hide_img_fs = """
     <style>
@@ -35,7 +28,6 @@ hide_img_fs = """
     </style>
 """
 st.markdown(hide_img_fs, unsafe_allow_html=True)
-
 # Arrondi les coins des images.
 round_corners = """
     <style>
@@ -45,7 +37,6 @@ round_corners = """
     </style>
 """
 st.markdown(round_corners, unsafe_allow_html=True)
-
 st.markdown(
     """
     <script>
@@ -66,7 +57,6 @@ machine_learning = "datasets/machine_learning_final.parquet"
 site_web = "datasets/site_web.parquet"
 df_ml = pd.read_parquet(machine_learning)
 df_ml = clean_dup(df_ml)
-
 df_sw = pd.read_parquet(site_web)
 df_sw = clean_dup(df_sw)
 
@@ -76,11 +66,14 @@ movies = df_sw["titre_str"]
 movies_list = [default_message] + list(sorted(movies))
 selectvalue = default_message
 
+
 def callback():
     st.session_state["button_clicked"] = True
 
+
 def callback2():
     st.session_state["button_clicked"] = False
+
 
 # Début de la page.
 st.session_state["clicked"] = None
@@ -97,11 +90,25 @@ if "counter" not in st.session_state:
 if "button_clicked" not in st.session_state:
     st.session_state["button_clicked"] = False
 
-# TESTING ACTORS AND DIRECTORS
-if "actors_clicked" not in st.session_state:
-    st.session_state["actors_clicked"] = False
-if "directors_clicked" not in st.session_state:
-    st.session_state["directors_clicked"] = False
+# # TESTING POUR ALLER SUR LA PAGE full_bio.py quand je clique sur l'image des acteurs et directors
+# if 'page_actuelle' not in st.session_state:
+#     st.session_state.page_actuelle = "principale"
+
+
+# def page_principale():
+#     st.title("Page Principale")
+#     # Contenu de la page principale
+
+# def autre_page():
+#     st.title("Autre Page")
+#     # Contenu de l'autre page
+
+# if st.session_state.page_actuelle == "principale":
+#     page_principale()
+
+# elif st.session_state.page_actuelle == "autre":
+#     autre_page()
+
 
 top = 10
 
@@ -115,38 +122,30 @@ selectvalue = st.selectbox(
 if selectvalue != default_message:
     selected_movie = df_sw[df_sw["titre_str"] == selectvalue]
     afficher_details_film(selected_movie)
-    st.subheader("",anchor=False, divider=True)
-    actors_list = [a for a in get_actors_dict(selected_movie).values()]
-    director_list = [d for d in get_directors_dict(selected_movie).values()]
-    director = asyncio.run(fetch_persons_bio(director_list, True))
-    actors = asyncio.run(fetch_persons_bio(actors_list))
-    one_for_all = director + actors
-    cols = st.columns(len(one_for_all))
-    for i, col in enumerate(cols):
-        with col:
-            index, clicked = get_clicked_act_dirct(one_for_all, i)
-    st.subheader("**Recommandations :**",anchor=False, divider=True)
-    recommended = knn_algo(df_ml, selectvalue, top)
-    cols = st.columns(top)
-    for i, col in enumerate(cols):
-        with col:
-            index, clicked = get_clicked(df_sw, recommended, i)
-            if clicked:
-                st.session_state["button_clicked"] = False
-                st.session_state["clicked"] = index
-    if st.session_state["clicked"] is not None:
-        infos_button(df_sw, movies_list, st.session_state["clicked"])
-        st.session_state["counter"] += 1
-        auto_scroll()
-        st.rerun()
+    synop, recom = st.columns([3, 4])
+    with synop:
+        st.subheader("**Synopsis :**", anchor=False, divider=True)
+        st.markdown(get_info(selected_movie, "overview"))
+    with recom:
+        st.subheader("**Films Similaires :**", anchor=False, divider=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        top = 5
+        recommended = knn_algo(df_ml, selectvalue, top)
+        cols = st.columns(top)
+        for i, col in enumerate(cols):
+            with col:
+                index, clicked = get_clicked(df_sw, recommended, i)
+                if clicked:
+                    st.session_state["button_clicked"] = False
+                    st.session_state["clicked"] = index
+        if st.session_state["clicked"] is not None:
+            infos_button(df_sw, movies_list, st.session_state["clicked"])
+            st.session_state["counter"] += 1
+            auto_scroll()
+            st.rerun()
     auto_scroll()
-    st.subheader("**Bande Annonce :**", anchor=False, divider=True)
-    col1, col2, col3 = st.columns(3)
-    with col2:
-        st.video(get_info(selected_movie, "youtube"))
 else:
     st.markdown("<br>", unsafe_allow_html=True)
-    # st.markdown("<br><br>", unsafe_allow_html=True)
     st.write("Comment utiliser l'application de recommandations :")
     st.write("1. Choisissez ou entrer le nom d'un film.")
     st.write(
@@ -168,7 +167,7 @@ else:
     for genre in genres_list:
         genre_df = afficher_top_genres(df_sw, genre)
         titres = genre_df["titre_str"].head(top).tolist()
-        st.header(f"Top {top} Films {genre} du moment :", anchor=False)
+        st.header(f"Top {top} {genre} :", anchor=False)
         cols = st.columns(top)
         for i, col in enumerate(cols):
             with col:
@@ -180,9 +179,10 @@ else:
         if st.session_state["clicked"] is not None:
             infos_button(df_sw, movies_list, st.session_state["clicked"])
             st.session_state["counter"] += 1
-            # auto_scroll()
+            auto_scroll()
             st.rerun()
-    # auto_scroll()
+    auto_scroll()
+
 st.write(
     "App développée par [Morgan](https://github.com/Morgan-DCL) et [Teddy](https://github.com/dsteddy)"
 )

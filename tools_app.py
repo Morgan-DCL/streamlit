@@ -1,16 +1,16 @@
-import pandas as pd
-import numpy as np
-import requests
-
-import aiohttp
 import asyncio
 
+import aiohttp
+import numpy as np
+import pandas as pd
+import requests
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.neighbors import NearestNeighbors
 from st_click_detector import click_detector
 
 import streamlit as st
 import streamlit.components.v1 as components
+
 
 async def fetch_infos(
     ss: object,
@@ -27,6 +27,7 @@ async def fetch_infos(
     async with ss.get(url, params=params) as rsp:
         return await rsp.json()
 
+
 async def fetch_persons_bio(
     people_list: list, director: bool = False
 ) -> list:
@@ -34,9 +35,7 @@ async def fetch_persons_bio(
     async with aiohttp.ClientSession() as ss:
         taches = []
         for id in people_list:
-            tache = asyncio.create_task(
-                fetch_infos(ss, id)
-            )
+            tache = asyncio.create_task(fetch_infos(ss, id))
             taches.append(tache)
         datas = await asyncio.gather(*taches)
         full = []
@@ -47,28 +46,47 @@ async def fetch_persons_bio(
             if director:
                 top_credits = sorted(
                     (
-                        n for n in data["combined_credits"]["crew"]
-                        if n["media_type"] == "movie" and n["job"] =="Director"
-                        and all(genre not in n["genre_ids"] for genre in exclude)
+                        n
+                        for n in data["combined_credits"]["crew"]
+                        if n["media_type"] == "movie"
+                        and n["job"] == "Director"
+                        and all(
+                            genre not in n["genre_ids"]
+                            for genre in exclude
+                        )
                     ),
-                    key=lambda x: (-x['popularity'], -x['vote_average'], -x["vote_count"])
+                    key=lambda x: (
+                        -x["popularity"],
+                        -x["vote_average"],
+                        -x["vote_count"],
+                    ),
                 )[:8]
             else:
                 top_credits = sorted(
                     (
-                        n for n in data["combined_credits"]["cast"]
-                        if n["media_type"] == "movie" and n["order"] <= 3
-                        and all(genre not in n["genre_ids"] for genre in exclude)
+                        n
+                        for n in data["combined_credits"]["cast"]
+                        if n["media_type"] == "movie"
+                        and n["order"] <= 3
+                        and all(
+                            genre not in n["genre_ids"]
+                            for genre in exclude
+                        )
                     ),
-                    key=lambda x: (-x['popularity'], -x['vote_average'], -x["vote_count"])
+                    key=lambda x: (
+                        -x["popularity"],
+                        -x["vote_average"],
+                        -x["vote_count"],
+                    ),
                 )[:8]
             data["top_5"] = [n["title"] for n in top_credits]
-            data["top_5_images"] = [f"{url_image}{n['poster_path']}" for n in top_credits]
-            data["top_5_movies_ids"] = [n['id'] for n in top_credits]
+            data["top_5_images"] = [
+                f"{url_image}{n['poster_path']}" for n in top_credits
+            ]
+            data["top_5_movies_ids"] = [n["id"] for n in top_credits]
             to_pop = (
                 "adult",
                 "also_known_as",
-                # "gender",
                 "homepage",
                 "profile_path",
                 "combined_credits",
@@ -97,11 +115,14 @@ def clean_dup(df: pd.DataFrame) -> pd.DataFrame:
     """
     condi = df["titre_str"].duplicated(keep=False)
     df.loc[condi, "titre_str"] = (
-        df.loc[
-            condi, "titre_str"
-        ] + " " + "(" + df.loc[condi, "date"].astype(str) + ")"
+        df.loc[condi, "titre_str"]
+        + " "
+        + "("
+        + df.loc[condi, "date"].astype(str)
+        + ")"
     )
     return df
+
 
 def auto_scroll():
     """
@@ -110,21 +131,18 @@ def auto_scroll():
     Cette fonction ne prend aucun paramètre et ne retourne rien.
     Elle utilise un script HTML pour réinitialiser le défilement de la fenêtre.
     """
-    # section
     components.html(
         f"""
             <p>{st.session_state["counter"]}</p>
             <script>
-                window.parent.document.querySelector('.main').scrollTo(0, 0);
+                window.parent.document.querySelector('section.main').scrollTo(0, 0);
             </script>
         """,
-        height=0
+        height=0,
     )
 
-def get_info(
-        df: pd.DataFrame,
-        info_type: str
-    ):
+
+def get_info(df: pd.DataFrame, info_type: str):
     """
     Extrait une information spécifique du premier élément d'une colonne d'un DataFrame.
 
@@ -144,10 +162,7 @@ def get_info(
     return info
 
 
-def get_titre_from_index(
-        df: pd.DataFrame,
-        idx: int
-    ) -> str:
+def get_titre_from_index(df: pd.DataFrame, idx: int) -> str:
     """
     Récupère le titre correspondant à un index donné dans un DataFrame.
 
@@ -165,10 +180,8 @@ def get_titre_from_index(
     """
     return df[df.index == idx]["titre_str"].values[0]
 
-def get_index_from_titre(
-        df: pd.DataFrame,
-        titre: str
-    ) -> int:
+
+def get_index_from_titre(df: pd.DataFrame, titre: str) -> int:
     """
     Trouve l'index correspondant à un titre donné dans un DataFrame.
 
@@ -186,6 +199,7 @@ def get_index_from_titre(
     """
     return df[df.titre_str == titre].index[0]
 
+
 def knn_algo(df: pd.DataFrame, titre: str, top: int = 5) -> list:
     """
     Implémente l'algorithme KNN pour recommander des titres similaires.
@@ -202,25 +216,28 @@ def knn_algo(df: pd.DataFrame, titre: str, top: int = 5) -> list:
     List[str]
         Liste de titres recommandés.
     """
-    index = df[
-        df["titre_str"] == titre
-    ].index[0]
+    # df["all_for_one"] = df["date"].astype(str)+" "+df["one_for_all"]
+
+    index = df[df["titre_str"] == titre].index[0]
     cv = CountVectorizer()
     count_matrix = cv.fit_transform(
+        # df["all_for_one"]
         df["one_for_all"]
     )
     knn_model = NearestNeighbors(
         metric="cosine",
-        algorithm="brute"
+        algorithm="brute",
+        n_jobs=-1,
     ).fit(count_matrix)
-    dist, indices = knn_model.kneighbors(
-        count_matrix[index], n_neighbors = top+1
+    _, indices = knn_model.kneighbors(
+        count_matrix[index], n_neighbors=top + 1
     )
     result = []
-    for idx, dis in zip(indices.flatten()[1:], dist.flatten()[1:]):
+    for idx in indices.flatten()[1:]:
         recommandations = get_titre_from_index(df, idx)
         result.append(recommandations)
     return result
+
 
 def infos_button(df: pd.DataFrame, movie_list: list, idx: int):
     """
@@ -240,12 +257,13 @@ def infos_button(df: pd.DataFrame, movie_list: list, idx: int):
     titre = get_titre_from_index(df, idx)
     st.session_state["index_movie_selected"] = movie_list.index(titre)
 
+
 def get_clicked(
     df: pd.DataFrame,
     titres_list: list,
     nb: int,
     genre: str = "Drame",
-    key_: bool = False
+    key_: bool = False,
 ):
     """
     Génère un élément cliquable pour un film et renvoie son index et un détecteur de clic.
@@ -271,13 +289,20 @@ def get_clicked(
     index = int(get_index_from_titre(df, titres_list[nb]))
     movie = df[df["titre_str"] == titres_list[nb]]
     image_link = get_info(movie, "image")
-    content = f"""<a href="#" id="{titres_list[nb]}"><img width="125px" heigth="180px" src="{image_link}" style="border-radius: 5%"></a>"""
+    titre_str = get_info(movie, "titre_str")
+    content = f"""
+        <div style="text-align: center;">
+            <a href="#" id="{titres_list[nb]}">
+                <img width="125px" heigth="180px" src="{image_link}"
+                    style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
+            </a>
+            <p style="margin: 0;">{titre_str}</p>
+    """
     if key_:
         unique_key = f"click_detector_{genre}_{index}"
         return index, click_detector(content, key=unique_key)
     else:
         return index, click_detector(content)
-
 
 
 @st.cache_data
@@ -297,156 +322,151 @@ def afficher_top_genres(df: pd.DataFrame, genres: str) -> pd.DataFrame:
     pd.DataFrame
         DataFrame des films triés par popularité, note moyenne, et nombre de votes.
     """
-    sort_by = [
-        'popularity', 'rating_avg', 'rating_vote'
-    ]
+    sort_by = ["date", "popularity", "rating_avg", "rating_vote"]
     ascending_ = [False for i in range(len(sort_by))]
     condi = (
         (
-            df["titre_genres"].str.contains(genres) &
-            ~df["titre_genres"].str.contains("Animation")
+            df["titre_genres"].str.contains(genres)
+            & ~df["titre_genres"].str.contains("Animation")
         )
         if genres != "Animation"
         else df["titre_genres"].str.contains(genres)
     )
     return df[condi].sort_values(by=sort_by, ascending=ascending_)
 
-def get_clicked_act_dirct(
-    api_list: list,
-    nb: int,
-):
-    index = 1
+
+def get_clicked_act_dirct(api_list: list, nb: int, total_director: int):
     peo = api_list[nb]
-    width = 125
-    height = 180
-    actor_actress = 'Acteur' if peo["gender"] == 2 else 'Actrice'
-    import pprint
-    pprint.pprint(peo)
-    # target="_blank"
+    width = 130
+    height = 190
+    actor_actress = "Acteur" if peo["gender"] == 2 else "Actrice"
+
+    # <p style="margin: 0;">{'Réalisateur' if nb < 1 else actor_actress}</p>
+    # content = f"""<a href="#" id="{titres_list[nb]}">
+    #             <img width="125px" heigth="180px" src="{image_link}" style="border-radius: 5%"></a>"""
+
     content = f"""
         <div style="text-align: center;">
-            <a href="{peo['biography']}" id="{api_list[nb]}">
+            <a href="#" <id="{api_list[nb]}">
                 <img width="{str(width)}px" height="{str(height)}px" src="{peo['image']}"
-                    style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
+                    style="object-fit: cover; border-radius: 7%; margin-bottom: 15px;">
             </a>
-            <p style="margin: 0;">{'Directeur' if nb < 1 else actor_actress}</p>
+            <p style="margin: 0;">{"Réalisateur" if nb < total_director else actor_actress}</p>
             <p style="margin: 0;"><strong>{peo['name']}</strong></p>
         </div>
     """
     unique_key = f"click_detector_{np.random.random()}"
-    return index, click_detector(content, key=unique_key)
+    return peo, click_detector(content, key=unique_key)
 
 
-
+# @st.cache_data
 def afficher_details_film(df: pd.DataFrame):
-    """
-    Affiche les détails d'un film dans une interface Streamlit, incluant l'image et des informations clés.
+    infos = {
+        "date": get_info(df, "date"),
+        "image": get_info(df, "image"),
+        "titre_str": get_info(df, "titre_str"),
+        "titre_genres": get_info(df, "titre_genres"),
+        "rating_avg": round(get_info(df, "rating_avg"), 1),
+        "rating_vote": get_info(df, "rating_vote"),
+        "popularity": get_info(df, "popularity"),
+        "runtime": get_info(df, "runtime"),
+        "synopsis": get_info(df, "overview"),
+        "tagline": get_info(df, "tagline"),
+        "youtube": get_info(df, "youtube"),
+    }
+    film_str: str = infos["titre_str"]
+    name_film = film_str[:-7] if film_str.endswith(")") else film_str
+    runtime = infos["runtime"]
+    actors_list = [a for a in get_actors_dict(df).values()]
+    director_list = [d for d in get_directors_dict(df).values()]
+    director = asyncio.run(fetch_persons_bio(director_list, True))
+    actors = asyncio.run(fetch_persons_bio(actors_list))
 
-    Parameters
-    ----------
-    df : pd.DataFrame
-        DataFrame contenant les informations du film.
-
-    Cette fonction ne retourne rien mais utilise Streamlit pour afficher des détails tels que
-    le titre, le genre, le réalisateur, et les acteurs du film.
-    """
-    auto_scroll()
-    col1, col2 = st.columns([1, 3])
-    col1.image(get_info(df, "image"), use_column_width = True)
-    columns = [
-        "titre_str",
-        "titre_genres",
-        "overview",
-        "actors",
-    ]
-    runtime = get_info(df, "runtime")
-    film_str = get_info(df, "titre_str")
-    name_film = film_str if not film_str.__contains__("(") else film_str[:-7]
+    col1, col2, cols3 = st.columns([1, 2, 1])
+    with col1:
+        st.image(infos["image"], use_column_width=True)
     with col2:
-        for detail in columns:
-            if detail == "titre_str":
-                st.header(
-                    f"{name_film} - ({get_info(df, 'date')})", anchor=False, divider=True)
-            if detail == "titre_genres":
-                st.caption(
-                    f"<p style='font-size: 16px;'>{get_info(df, detail)}  •  {f'{runtime // 60}h {runtime % 60}m'}</p>", unsafe_allow_html=True)
-                print(df.columns)
-                rating_avg = get_info(df, 'rating_avg')
-                # "#58D68D"
-                color = "#198c19" if rating_avg >= 7 else "#F4D03F" if rating_avg >= 5 else "#E74C3C"
-                circle_html = f"""
-                <div style="display: inline-flex; align-items: center; justify-content: center; background-color: {color};
-                            border-radius: 50%; width: 60px; height: 60px;">
-                <h2 style="text-align: center; color: #F2F2F2; font-size: 25px;">{round(rating_avg, 2)}</h2>
+        st.header(
+            f"{name_film} - ({infos['date']})", anchor=False, divider=True
+        )
+
+        st.caption(
+            f"<p style='font-size: 16px;'>{infos['titre_genres']} • {f'{runtime // 60}h {runtime % 60}m'}</p>",
+            unsafe_allow_html=True,
+        )
+        texte_fondu = (
+            f'<span style="color: #555;">*"{infos["tagline"]}"*</span>'
+        )
+        st.write(texte_fondu, unsafe_allow_html=True)
+        color_rating = (
+            "#198c19"
+            if infos["rating_avg"] >= 7
+            else "#F4D03F"
+            if infos["rating_avg"] >= 5
+            else "#E74C3C"
+        )
+        txt_color = "#F2F2F2"
+
+        gap = 0.1
+
+        elements_html = f"""
+            <div style="display: flex; flex-direction: column; align-items: center; gap: {gap}px;">
+                <p>Notes</p>
+                <div style="background-color: {color_rating}; border-radius: 50%; width: 60px; height: 60px;">
+                    <h2 style="text-align: center; color: {txt_color}; font-size: 22px;">{round(infos["rating_avg"], 2)}</h2>
                 </div>
-                """
-                st.markdown(circle_html, unsafe_allow_html=True)
-                st.markdown("<br>", unsafe_allow_html=True)
-                texte_italique = f"*{get_info(df, 'tagline')}*"
-                texte_fondu = f'<span style="color: #555;">{texte_italique}</span>'
-                st.write(texte_fondu, unsafe_allow_html=True)
+            </div>
+        """
+        st.markdown(
+            f"<div style='display: flex; justify-content: start; gap: 20px;'>{elements_html}</div>",
+            unsafe_allow_html=True,
+        )
+        st.write(f'{infos["rating_vote"]} votes')
+        full_perso = director + actors
+        cols = st.columns(len(full_perso))
+        for i, col in enumerate(cols):
+            st.session_state["person_id"] = full_perso[i]["id"]
 
-            if detail == "overview":
-                st.subheader("**Synopsis :**", anchor=False, divider=True)
-                st.markdown(get_info(df, detail))
-            # if detail == "actors":
-            #     st.subheader("",anchor=False, divider=True)
-            #     actors_list = [a for a in get_actors_dict(df).values()]
-            #     director_list = [d for d in get_directors_dict(df).values()]
-            #     director = asyncio.run(fetch_persons_bio(config, director_list, True))
-            #     actors = asyncio.run(fetch_persons_bio(config, actors_list))
-            #     one_for_all = director + actors
-            #     cols = st.columns(len(one_for_all))
-            #     for i, col in enumerate(cols):
-            #         with col:
-            #             print(i)
-            #             index, clicked = get_clicked_act_dirct(one_for_all, i)
-                # Une fois cliqué créér une page uniquement de biographie avec leurs films etc ....
-                # Quand on clique sur un de leurs films, go back to case départ et a nouveau recommandation etc..
+            with col:
+                if i < 1:
+                    st.subheader(
+                        "**Réalisation :**", anchor=False, divider=True
+                    )
+                elif i == len(director):
+                    st.subheader(
+                        "**Casting :**", anchor=False, divider=True
+                    )
+                else:
+                    st.markdown("<br><br>", unsafe_allow_html=True)
+                index, clicked = get_clicked_act_dirct(
+                    full_perso, i, len(director)
+                )
+                if clicked:
+                    st.session_state["button_clicked"] = False
+                    st.session_state["person_id"] = full_perso[i]["id"]
+                    st.session_state["page_actuelle"] = "full_bio"
+            if st.session_state["clicked"] is not None:
+                # infos_button(df, (director + actors), st.session_state["clicked"])
+                st.session_state["counter"] += 1
+                auto_scroll()
+                st.rerun()
 
-                # col1, col2 = st.columns([1, 3])
-                # with col1:
-                #     for n in actors:
-                #         st.markdown(f"**{n['name']}**")
-                # with col2:
-                #         st.image([n["image"] for n in actors], width=75)
-                        # st.image(actors_img, width=75)
-            # else:
-            #     st.subheader(f"**{detail.capitalize()} :**", anchor=False, divider=True)
-            #     if detail == "director":
-            #         director_list = [a for a in get_directors_dict(df).values()]
-            #         director = asyncio.run(fetch_persons_bio(config, director_list, True))
-            #         # col1, col2 = st.columns([3, 1])
-            #         # with col1:
-            #         #     for n in director:
-            #         #         st.markdown(f"**{n['name']}**")
-            #         # with col2:
-            #         #     st.image([n["image"] for n in director], width=75)
-            #         for n in director:
-            #             cols = st.columns([1, 3])  # Crée une colonne plus large pour l'image
-            #             with cols[0]:
-            #                 st.image(n["image"], use_column_width=True)  # Centrer l'image
-            #             with cols[1]:
-            #                 st.write(f"**{n['name']}**")  # Le nom sous l'image
-            #     if detail == "actors":
-            #         actors_list = [a for a in get_actors_dict(df).values()]
-            #         # actors = asyncio.run(fetch_persons_bio(config, actors_list))
-            #         # col1, col2 = st.columns([3, 1])
-            #         # with col1:
-            #         #     for n in actors:
-            #         #         st.markdown(f"**{n['name']}**")
-            #         # with col2:
-            #         #     st.image([n["image"] for n in actors], width=75)
-            #     # Pour le réalisateur
-            #     # director = asyncio.run(fetch_persons_bio(config, director_list, True))
-            #         actors = asyncio.run(fetch_persons_bio(config, actors_list))
-            #         for n in actors:
-            #             cols = st.columns([1, 3])  # Crée une colonne plus large pour l'image
-            #             with cols[0]:
-            #                 st.image(n["image"], use_column_width=True)  # Centrer l'image
-            #             with cols[1]:
-            #                 st.write(f"**{n['name']}**")  # Le nom sous l'image
-            #         # Pour les acteurs
+    with cols3:
+        st.header("**Bande Annonce :** ", anchor=False, divider=True)
+        print(infos["youtube"])
+        youtube_url = (
+            str(infos["youtube"]).replace("watch?v=", "embed/")
+            + "?autoplay=1&mute=0"
+        )
+        yout = f"""
+            <div style="margin-top: 20px;">
+                <iframe width="100%" height="315" src="{youtube_url}" frameborder="0" allowfullscreen></iframe>
+            </div>
+        """
+        # st.video(infos["youtube"])
+        st.markdown(yout, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def get_actors_dict(df: pd.DataFrame) -> dict:
