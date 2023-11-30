@@ -14,47 +14,44 @@ from tools_app import (
     get_clicked_bio,
     get_index_from_titre,
     infos_button,
+    remove_full_screen,
+    round_corners,
+    del_sidebar
 )
 
 df_sw = pd.read_parquet("datasets/site_web.parquet")
 df_sw = clean_dup(df_sw)
 
+pdict = st.session_state["actor"]
+mov_dup_dict : dict = st.session_state["dup_movie_dict"]
+
 # Configuration de la page
 st.set_page_config(
-    page_title="Persons Bio",
+    page_title=f"{pdict['name']}",
     page_icon="👤",
     initial_sidebar_state="collapsed",
     layout="wide",
 )
 
+del_sidebar()
+remove_full_screen()
+round_corners()
+
 st.session_state["clicked"] = None
 st.session_state["clicked2"] = None
 st.session_state["clicked3"] = None
 
-if st.button("Retour"):
-    switch_page("DDMRS")
 
-hide_img_fs = """
-    <style>
-    button[title="View fullscreen"]{
-        visibility: hidden;
-    }
-    </style>
-"""
-st.markdown(hide_img_fs, unsafe_allow_html=True)
-
-round_corners = """
-    <style>
-        .st-emotion-cache-1v0mbdj > img{
-            border-radius:2%;
-        }
-    </style>
-"""
-st.markdown(round_corners, unsafe_allow_html=True)
-
-pdict = st.session_state["actor"]
-mov_dup_dict : dict = st.session_state["dup_movie_dict"]
-
+home, retour, vide = st.columns([1,2,20])
+with home:
+    if st.button("🏠"):
+        default_message = st.session_state["default_message"]
+        movies_list = st.session_state["movie_list"]
+        st.session_state["index_movie_selected"] = movies_list.index(default_message)
+        switch_page("DDMRS")
+with retour :
+    if st.button("Retour"):
+        switch_page("DDMRS")
 col1, col2 = st.columns([1, 4])
 with col1:
     st.image(pdict["image"], use_column_width=True)
@@ -73,24 +70,23 @@ with col2:
         f"<p style='font-size: 16px;'>{birth.strftime('%Y-%m-%d') if pdict['birthday'] else 'Unknow'}{add_death} • ({age} ans)</p>",
         unsafe_allow_html=True
     )
-    titre = "Réalisation" if pdict["director"] else "Célèbre pour"
-    st.subheader(f"**{titre}**", anchor=False, divider=True)
     len_ml = len(pdict["top_5_movies_ids"])
+    cmt = "Films emblématiques" if len_ml > 1 else 'Film emblématique'
+    titre = "Réalisation" if pdict["director"] else f"{cmt}"
+    st.subheader(f"**{titre}**", anchor=False, divider=True)
     cols = st.columns(len_ml)
 
     for i, col in enumerate(cols):
         with col:
             nom_film, clicked3 = get_clicked_bio(
-                pdict, mov_dup_dict, i, len_ml
+                pdict, mov_dup_dict, i
             )
             if clicked3:
                 st.session_state["clicked3"] = True
                 infos_button(df_sw, st.session_state["movie_list"], get_index_from_titre(df_sw, nom_film))
+
     if st.session_state["clicked3"]:
         switch_page("DDMRS")
-        # st.session_state["counter"] += 1
-        # auto_scroll()
-        # st.rerun()
-
-st.subheader("**Biography :**", anchor=False, divider=True)
-st.markdown(pdict['biography'])
+if len(pdict["biography"]) > 1:
+    st.subheader("**Biographie :**", anchor=False, divider=True)
+    st.markdown(pdict['biography'])

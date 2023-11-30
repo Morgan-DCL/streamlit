@@ -135,6 +135,7 @@ async def fetch_persons_movies(
             data["characters"] = {n["id"]: n["character"] for n in test if n["id"] in people_list}
     return data["characters"]
 
+
 def clean_dup(df: pd.DataFrame) -> pd.DataFrame:
     """
     Nettoie les doublons dans une colonne spécifique d'un DataFrame en ajoutant
@@ -218,7 +219,7 @@ def get_titre_from_index(df: pd.DataFrame, idx: int) -> str:
     return df[df.index == idx]["titre_str"].values[0]
 
 
-def get_index_from_titre(df: pd.DataFrame, titre) -> int:
+def get_index_from_titre(df: pd.DataFrame, titre: str) -> int:
     """
     Trouve l'index correspondant à un titre donné dans un DataFrame.
 
@@ -293,7 +294,6 @@ def infos_button(df: pd.DataFrame, movie_list: list, idx: int):
     """
     titre = get_titre_from_index(df, idx)
     st.session_state["index_movie_selected"] = movie_list.index(titre)
-
 
 def get_clicked(
     df: pd.DataFrame,
@@ -372,11 +372,10 @@ def afficher_top_genres(df: pd.DataFrame, genres: str) -> pd.DataFrame:
     return df[condi].sort_values(by=sort_by, ascending=ascending_)
 
 
-def get_clicked_act_dirct(api_list: list, character: dict, nb: int, total_director: int):
+def get_clicked_act_dirct(api_list: list, character: dict, nb: int):
     peo = api_list[nb]
     width = 130
     height = 190
-
     name = ""
     for k, v in character.items():
         if peo["id"] == k:
@@ -391,11 +390,10 @@ def get_clicked_act_dirct(api_list: list, character: dict, nb: int, total_direct
             <p style="margin: 0;"><strong>{peo['name']}</strong></p>
             <p style="margin: 0;"><em style="opacity: 0.7;">{name}</em></p>
     """
-
     unique_key = f"click_detector_{nb}_{peo['name']}"
     return peo, click_detector(content, key=unique_key)
 
-def get_clicked_bio(api_list: list, dup_ids: dict, nb: int, total_director: int):
+def get_clicked_bio(api_list: list, dup_ids: dict, nb: int):
     peo = api_list
     image = [n for n in api_list["top_5_images"]][nb]
     nom_film = [n for n in api_list['top_5']][nb]
@@ -403,9 +401,10 @@ def get_clicked_bio(api_list: list, dup_ids: dict, nb: int, total_director: int)
 
     dupp = {k:v for k, v in dup_ids.items()}
 
-    nom_= dup_ids.get(nom_ids, nom_film)
+    nom_= dupp.get(nom_ids, nom_film)
 
     character = [n for n in api_list["character"]][nb] if not peo["director"] else ""
+
     width = 130
     height = 190
     content = f"""
@@ -417,7 +416,6 @@ def get_clicked_bio(api_list: list, dup_ids: dict, nb: int, total_director: int)
             <p style="margin: 0;"><strong>{nom_}</strong></p>
             <p style="margin: 0;"><em style="opacity: 0.7;">{character}</em></p>
     """
-
     unique_key = f"bio_{nb}_{peo['name']}"
     return nom_, click_detector(content, key=unique_key)
 
@@ -491,6 +489,7 @@ def afficher_details_film(df: pd.DataFrame, movies_ids: list):
         cols = st.columns(len(full_perso))
         actors_ids = [n["id"] for n in actors]
         character = asyncio.run(fetch_persons_movies(infos["id"], actors_ids))
+
         for i, col in enumerate(cols):
             # st.session_state["person_id"] = full_perso[i]["id"]
 
@@ -506,7 +505,7 @@ def afficher_details_film(df: pd.DataFrame, movies_ids: list):
                 else:
                     st.markdown("<br><br>", unsafe_allow_html=True)
                 prso_dict, clicked2 = get_clicked_act_dirct(
-                    full_perso, character, i, len(director)
+                    full_perso, character, i
                 )
                 if clicked2:
                     st.session_state["clicked2"] = True
@@ -589,3 +588,54 @@ def get_directors_dict(df: pd.DataFrame) -> dict:
         directors_id_pairs = zip(directors_list, ids)
         directors_dict.update(directors_id_pairs)
     return directors_dict
+
+def get_clicked_home():
+    # index = movies_list.index(default_message)
+    image_link = "https://cdn-icons-png.flaticon.com/512/4849/4849108.png"
+    content = f"""
+            <a href="#" id="Home">
+                <img width="20px" heigth="20px" src="{image_link}"
+                    style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
+            </a>
+    """
+    return click_detector(content)
+
+def del_sidebar():
+    '''
+    Supprime le bouton de la sidebar sur la page.
+    '''
+    delete_sidebar = """
+                    <style>
+                        [data-testid="collapsedControl"] {
+                            display: none
+                        }
+                    </style>
+                    """
+    st.markdown(delete_sidebar, unsafe_allow_html=True)
+
+def remove_full_screen():
+    '''
+    Supprime le bouton fullscreen des images de la page.
+    '''
+    hide_img_fs = """
+    <style>
+        button[title="View fullscreen"]{
+            visibility: hidden;
+        }
+    </style>
+    """
+    st.markdown(hide_img_fs, unsafe_allow_html=True)
+
+def round_corners():
+    '''
+    Arrondi les coins des images de la page.
+    '''
+    round_corners = """
+    <style>
+        .st-emotion-cache-1v0mbdj > img{
+            border-radius:2%;
+        }
+    </style>
+    """
+    st.markdown(round_corners, unsafe_allow_html=True)
+
