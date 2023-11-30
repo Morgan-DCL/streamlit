@@ -88,5 +88,5 @@ with col2:
     if st.session_state["clicked3"]:
         switch_page("DDMRS")
 if len(pdict["biography"]) > 1:
-    st.subheader("**Biographie :**", anchor=False, divider=True)
+    st.subheader("**Biographie**", anchor=False, divider=True)
     st.markdown(pdict['biography'])
