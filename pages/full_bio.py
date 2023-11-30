@@ -67,7 +67,7 @@ with col2:
     add_death = f" - {pdict['deathday']}" if pdict['deathday'] else ""
 
     st.caption(
-        f"<p style='font-size: 16px;'>{birth.strftime('%Y-%m-%d') if pdict['birthday'] else 'Unknow'}{add_death} • ({age} ans)</p>",
+        f"<p style='font-size: 16px;'>{birth.strftime('%d-%m-%Y') if pdict['birthday'] else 'Unknow'}{add_death} • {age} ans</p>",
         unsafe_allow_html=True
     )
     len_ml = len(pdict["top_5_movies_ids"])
