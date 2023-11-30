@@ -467,7 +467,7 @@ def afficher_details_film(df: pd.DataFrame, movies_ids: list):
             if infos["rating_avg"] >= 5
             else "#E74C3C"
         )
-        txt_color = "#F2F2F2"
+        txt_color = "#c8c8c8"
 
         gap = 0.1
 
