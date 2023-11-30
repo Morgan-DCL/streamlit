@@ -125,7 +125,7 @@ else:
     for genre in genres_list:
         genre_df = afficher_top_genres(df_sw, genre)
         titres = genre_df["titre_str"].head(10).tolist()
-        st.header(f"Top 10 {genre} :", anchor=False)
+        st.header(f"Top 10 {genre}", anchor=False)
         cols = st.columns(10)
         for i, col in enumerate(cols):
             with col:
@@ -142,5 +142,5 @@ else:
     auto_scroll()
 
 st.write(
-    "App développée par [Morgan](https://github.com/Morgan-DCL) et [Teddy](https://github.com/dsteddy)"
+    "Application développée par [Morgan](https://github.com/Morgan-DCL) et [Teddy](https://github.com/dsteddy)"
 )
