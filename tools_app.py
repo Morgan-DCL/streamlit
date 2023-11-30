@@ -327,6 +327,7 @@ def get_clicked(
     movie = df[df["titre_str"] == titres_list[nb]]
     image_link = get_info(movie, "image")
     titre_str = get_info(movie, "titre_str")
+    date = get_info(movie, "date")
     content = f"""
         <div style="text-align: center;">
             <a href="#" id="{titres_list[nb]}">
@@ -335,6 +336,7 @@ def get_clicked(
             </a>
             <p style="margin: 0;">{titre_str}</p>
     """
+    # <p style="margin: 0;">{date}</p>
     if key_:
         unique_key = f"click_detector_{genre}_{index}"
         return index, click_detector(content, key=unique_key)
