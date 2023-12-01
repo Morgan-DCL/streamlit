@@ -13,7 +13,6 @@ import streamlit.components.v1 as components
 from streamlit_extras.switch_page_button import switch_page
 
 
-
 async def fetch_infos(
     ss: object,
     TMdb_id: int,
@@ -47,7 +46,8 @@ async def fetch_persons_bio(
             if director:
                 top_credits = sorted(
                     (
-                        n for n in data["combined_credits"]["crew"]
+                        n
+                        for n in data["combined_credits"]["crew"]
                         if n["media_type"] == "movie"
                         and n["id"] in movies_ids
                         and n["job"] == "Director"
@@ -66,7 +66,8 @@ async def fetch_persons_bio(
             else:
                 top_credits = sorted(
                     (
-                        n for n in data["combined_credits"]["cast"]
+                        n
+                        for n in data["combined_credits"]["cast"]
                         if n["media_type"] == "movie"
                         and n["id"] in movies_ids
                         and n["order"] <= 3
@@ -85,7 +86,11 @@ async def fetch_persons_bio(
                 data["character"] = [n["character"] for n in top_credits]
 
             cmt = "https://images.assetsdelivery.com/compings_v2/2nix/2nix1408/2nix140800145.jpg"
-            data["image"] = f"{url_image}{data['profile_path']}" if data['profile_path'] else cmt
+            data["image"] = (
+                f"{url_image}{data['profile_path']}"
+                if data["profile_path"]
+                else cmt
+            )
 
             data["top_5"] = [n["title"] for n in top_credits]
             data["top_5_images"] = [
@@ -114,7 +119,7 @@ async def fetch_infos_movies(
         "api_key": "fe4a6f12753fa6c12b0fc0253b5e667f",
         "include_adult": "False",
         "language": "fr-FR",
-        "append_to_response": "keywords,credits,videos"
+        "append_to_response": "keywords,credits,videos",
     }
     base_url = "https://api.themoviedb.org/3/movie/"
     url = f"{base_url}{TMdb_id}"
@@ -122,10 +127,7 @@ async def fetch_infos_movies(
         return await rsp.json()
 
 
-async def fetch_persons_movies(
-    ids: int,
-    people_list: list
-) -> list:
+async def fetch_persons_movies(ids: int, people_list: list) -> list:
     async with aiohttp.ClientSession() as ss:
         taches = []
         for id in [ids]:
@@ -134,8 +136,12 @@ async def fetch_persons_movies(
             await asyncio.sleep(0.02)
         datas = await asyncio.gather(*taches)
         for data in datas:
-            test = data["credits"]['cast']
-            data["characters"] = {n["id"]: n["character"] for n in test if n["id"] in people_list}
+            test = data["credits"]["cast"]
+            data["characters"] = {
+                n["id"]: n["character"]
+                for n in test
+                if n["id"] in people_list
+            }
     return data["characters"]
 
 
@@ -298,6 +304,36 @@ def infos_button(df: pd.DataFrame, movie_list: list, idx: int):
     titre = get_titre_from_index(df, idx)
     st.session_state["index_movie_selected"] = movie_list.index(titre)
 
+@st.cache_data
+def afficher_top_genres(df: pd.DataFrame, genres: str) -> pd.DataFrame:
+    """
+    Affiche les films les mieux classés d'un genre spécifique, excluant "Animation" sauf si spécifié.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame contenant les films.
+    genres : str
+        Genre de films à afficher.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame des films triés par popularité, note moyenne, et nombre de votes.
+    """
+    sort_by = ["date", "popularity", "rating_avg", "rating_vote"]
+    ascending_ = [False for i in range(len(sort_by))]
+    condi = (
+        (
+            df["titre_genres"].str.contains(genres)
+            & ~df["titre_genres"].str.contains("Animation")
+        )
+        if genres != "Animation"
+        else df["titre_genres"].str.contains(genres)
+    )
+    return df[condi].sort_values(by=sort_by, ascending=ascending_)
+
+
 def get_clicked(
     df: pd.DataFrame,
     titres_list: list,
@@ -330,49 +366,32 @@ def get_clicked(
     movie = df[df["titre_str"] == titres_list[nb]]
     image_link = get_info(movie, "image")
     titre_str = get_info(movie, "titre_str")
+    # content = f"""
+    #     <div style="text-align: center;">
+    #         <a href="#" id="{titres_list[nb]}">
+    #             <img width="125px" heigth="180px" src="{image_link}"
+    #                 style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
+    #         </a>
+    #         <p style="margin: 0;">{titre_str}</p>
+    # """
+    # transition = 
     content = f"""
         <div style="text-align: center;">
             <a href="#" id="{titres_list[nb]}">
-                <img width="125px" heigth="180px" src="{image_link}"
-                    style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
+                <img width="125px" height="180px" src="{image_link}"
+                    style="object-fit: cover; border-radius: 5%; margin-bottom: 15px; cursor: pointer; transition: filter .2s ease-in-out, transform .2s ease-in-out;"
+                    onmouseover="this.style.filter='brightness(70%)'; this.style.transform='scale(1.2)'"
+                    onmouseout="this.style.filter='brightness(100%)'; this.style.transform='scale(1)'">
             </a>
             <p style="margin: 0;">{titre_str}</p>
+        </div>
     """
+
     if key_:
         unique_key = f"click_detector_{genre}_{index}"
         return index, click_detector(content, key=unique_key)
     else:
         return index, click_detector(content)
-
-
-@st.cache_data
-def afficher_top_genres(df: pd.DataFrame, genres: str) -> pd.DataFrame:
-    """
-    Affiche les films les mieux classés d'un genre spécifique, excluant "Animation" sauf si spécifié.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        DataFrame contenant les films.
-    genres : str
-        Genre de films à afficher.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame des films triés par popularité, note moyenne, et nombre de votes.
-    """
-    sort_by = ["date", "popularity", "rating_avg", "rating_vote"]
-    ascending_ = [False for i in range(len(sort_by))]
-    condi = (
-        (
-            df["titre_genres"].str.contains(genres)
-            & ~df["titre_genres"].str.contains("Animation")
-        )
-        if genres != "Animation"
-        else df["titre_genres"].str.contains(genres)
-    )
-    return df[condi].sort_values(by=sort_by, ascending=ascending_)
 
 
 def get_clicked_act_dirct(api_list: list, character: dict, nb: int):
@@ -384,15 +403,28 @@ def get_clicked_act_dirct(api_list: list, character: dict, nb: int):
         if peo["id"] == k:
             name = v
 
+    # content = f"""
+    #     <div style="text-align: center;">
+    #         <a href="#" id="{api_list[nb]}">
+    #             <img width="{str(width)}px" height="{str(height)}px" src="{peo['image']}"
+    #                 style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
+    #         </a>
+    #         <p style="margin: 0;"><strong>{peo['name']}</strong></p>
+    #         <p style="margin: 0;"><em style="opacity: 0.7;">{name}</em></p>
+    # """
     content = f"""
-        <div style="text-align: center;">
-            <a href="#" id="{api_list[nb]}">
-                <img width="{str(width)}px" height="{str(height)}px" src="{peo['image']}"
-                    style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
-            </a>
-            <p style="margin: 0;"><strong>{peo['name']}</strong></p>
-            <p style="margin: 0;"><em style="opacity: 0.7;">{name}</em></p>
+    <div style="text-align: center;">
+        <a href="#" id="{api_list[nb]}">
+            <img width="{str(width)}px" height="{str(height)}px" src="{peo['image']}"
+                style="object-fit: cover; border-radius: 5%; margin-bottom: 15px; cursor: pointer; transition: filter .2s ease-in-out, transform .2s ease-in-out;"
+                onmouseover="this.style.filter='brightness(70%)'; this.style.transform='scale(1.05)'"
+                onmouseout="this.style.filter='brightness(100%)'; this.style.transform='scale(1)'">
+        </a>
+        <p style="margin: 0;"><strong>{peo['name']}</strong></p>
+        <p style="margin: 0;"><em style="opacity: 0.7;">{name}</em></p>
+    </div>
     """
+
     unique_key = f"click_detector_{nb}_{peo['name']}"
     return peo, click_detector(content, key=unique_key)
 
@@ -409,23 +441,39 @@ def get_clicked_bio(api_list: list, dup_ids: dict, nb: int):
 
     peo = api_list
     image = [n for n in api_list["top_5_images"]][nb]
-    nom_film = [n for n in api_list['top_5']][nb]
-    nom_ids = [n for n in api_list['top_5_movies_ids']][nb]
+    nom_film = [n for n in api_list["top_5"]][nb]
+    nom_ids = [n for n in api_list["top_5_movies_ids"]][nb]
 
-    nom_= dup_ids.get(nom_ids, nom_film)
+    nom_ = dup_ids.get(nom_ids, nom_film)
 
-    character = [n for n in api_list["character"]][nb] if not peo["director"] else ""
+    character = (
+        [n for n in api_list["character"]][nb]
+        if not peo["director"]
+        else ""
+    )
 
     width = 130
     height = 190
+    # content = f"""
+    #     <div style="text-align: center;">
+    #         <a href="#" id="{nb}" class="layer">
+    #             <img width="{str(width)}px" height="{str(height)}px" src="{image}"
+    #                 style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
+    #         </a>
+    #         <p style="margin: 0;"><strong>{nom_}</strong></p>
+    #         <p style="margin: 0;"><em style="opacity: 0.7;">{character}</em></p>
+    # """
     content = f"""
         <div style="text-align: center;">
             <a href="#" id="{nb}" class="layer">
                 <img width="{str(width)}px" height="{str(height)}px" src="{image}"
-                    style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
+                    style="object-fit: cover; border-radius: 5%; margin-bottom: 15px; cursor: pointer; transition: filter .2s ease-in-out, transform .2s ease-in-out;"
+                    onmouseover="this.style.filter='brightness(70%)'; this.style.transform='scale(1.05)'"
+                    onmouseout="this.style.filter='brightness(100%)'; this.style.transform='scale(1)'">
             </a>
             <p style="margin: 0;"><strong>{nom_}</strong></p>
             <p style="margin: 0;"><em style="opacity: 0.7;">{character}</em></p>
+        </div>
     """
     unique_key = f"bio_{nb}_{peo['name']}"
     return nom_, click_detector(content, key=unique_key)
@@ -452,7 +500,9 @@ def afficher_details_film(df: pd.DataFrame, movies_ids: list):
     runtime = infos["runtime"]
     actors_list = [a for a in get_actors_dict(df).values()]
     director_list = [d for d in get_directors_dict(df).values()]
-    director = asyncio.run(fetch_persons_bio(director_list, movies_ids, True))
+    director = asyncio.run(
+        fetch_persons_bio(director_list, movies_ids, True)
+    )
     actors = asyncio.run(fetch_persons_bio(actors_list, movies_ids))
 
     col1, col2, cols3 = st.columns([1, 2, 1])
@@ -478,7 +528,7 @@ def afficher_details_film(df: pd.DataFrame, movies_ids: list):
             if infos["rating_avg"] >= 5
             else "#E74C3C"
         )
-        txt_color = "#F2F2F2"if infos["rating_avg"] >= 7 else "#191919"
+        txt_color = "#F2F2F2" if infos["rating_avg"] >= 7 else "#191919"
 
         gap = 0.1
 
@@ -499,7 +549,9 @@ def afficher_details_film(df: pd.DataFrame, movies_ids: list):
         full_perso = director + actors
         cols = st.columns(len(full_perso))
         actors_ids = [n["id"] for n in actors]
-        character = asyncio.run(fetch_persons_movies(infos["id"], actors_ids))
+        character = asyncio.run(
+            fetch_persons_movies(infos["id"], actors_ids)
+        )
 
         for i, col in enumerate(cols):
             # st.session_state["person_id"] = full_perso[i]["id"]
@@ -510,9 +562,7 @@ def afficher_details_film(df: pd.DataFrame, movies_ids: list):
                         "**Réalisation**", anchor=False, divider=True
                     )
                 elif i == len(director):
-                    st.subheader(
-                        "**Casting**", anchor=False, divider=True
-                    )
+                    st.subheader("**Casting**", anchor=False, divider=True)
                 else:
                     st.markdown("<br><br>", unsafe_allow_html=True)
                 prso_dict, clicked2 = get_clicked_act_dirct(
@@ -600,6 +650,7 @@ def get_directors_dict(df: pd.DataFrame) -> dict:
         directors_dict.update(directors_id_pairs)
     return directors_dict
 
+
 def get_clicked_home():
     # index = movies_list.index(default_message)
     image_link = "https://cdn-icons-png.flaticon.com/512/4849/4849108.png"
@@ -611,10 +662,11 @@ def get_clicked_home():
     """
     return click_detector(content)
 
+
 def del_sidebar():
-    '''
+    """
     Supprime le bouton de la sidebar sur la page.
-    '''
+    """
     delete_sidebar = """
                     <style>
                         [data-testid="collapsedControl"] {
@@ -624,10 +676,11 @@ def del_sidebar():
                     """
     st.markdown(delete_sidebar, unsafe_allow_html=True)
 
+
 def remove_full_screen():
-    '''
+    """
     Supprime le bouton fullscreen des images de la page.
-    '''
+    """
     hide_img_fs = """
     <style>
         button[title="View fullscreen"]{
@@ -637,10 +690,11 @@ def remove_full_screen():
     """
     st.markdown(hide_img_fs, unsafe_allow_html=True)
 
+
 def round_corners():
-    '''
+    """
     Arrondi les coins des images de la page.
-    '''
+    """
     round_corners = """
     <style>
         .st-emotion-cache-1v0mbdj > img{
@@ -649,4 +703,3 @@ def round_corners():
     </style>
     """
     st.markdown(round_corners, unsafe_allow_html=True)
-
