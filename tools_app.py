@@ -374,7 +374,6 @@ def get_clicked(
     #         </a>
     #         <p style="margin: 0;">{titre_str}</p>
     # """
-    # transition = 
     content = f"""
         <div style="text-align: center;">
             <a href="#" id="{titres_list[nb]}">
