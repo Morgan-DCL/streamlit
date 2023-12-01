@@ -226,7 +226,6 @@ def movies_by_decades(df: pd.DataFrame):
     top10_country = df.explode("production_countries")[
         "production_countries"
     ].value_counts()[:10].reset_index()
-    top10_country.reset_index()
     top10_country.rename(
         {
             "production_countries" : "nombre",
