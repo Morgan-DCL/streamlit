@@ -380,7 +380,7 @@ def get_clicked(
             <a href="#" id="{titres_list[nb]}">
                 <img width="125px" height="180px" src="{image_link}"
                     style="object-fit: cover; border-radius: 5%; margin-bottom: 15px; cursor: pointer; transition: filter .2s ease-in-out, transform .2s ease-in-out;"
-                    onmouseover="this.style.filter='brightness(70%)'; this.style.transform='scale(1.2)'"
+                    onmouseover="this.style.filter='brightness(70%)'; this.style.transform='scale(1.1)'"
                     onmouseout="this.style.filter='brightness(100%)'; this.style.transform='scale(1)'">
             </a>
             <p style="margin: 0;">{titre_str}</p>
