@@ -366,14 +366,6 @@ def get_clicked(
     movie = df[df["titre_str"] == titres_list[nb]]
     image_link = get_info(movie, "image")
     titre_str = get_info(movie, "titre_str")
-    # content = f"""
-    #     <div style="text-align: center;">
-    #         <a href="#" id="{titres_list[nb]}">
-    #             <img width="125px" heigth="180px" src="{image_link}"
-    #                 style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
-    #         </a>
-    #         <p style="margin: 0;">{titre_str}</p>
-    # """
     content = f"""
         <div style="text-align: center;">
             <a href="#" id="{titres_list[nb]}">
@@ -401,16 +393,6 @@ def get_clicked_act_dirct(api_list: list, character: dict, nb: int):
     for k, v in character.items():
         if peo["id"] == k:
             name = v
-
-    # content = f"""
-    #     <div style="text-align: center;">
-    #         <a href="#" id="{api_list[nb]}">
-    #             <img width="{str(width)}px" height="{str(height)}px" src="{peo['image']}"
-    #                 style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
-    #         </a>
-    #         <p style="margin: 0;"><strong>{peo['name']}</strong></p>
-    #         <p style="margin: 0;"><em style="opacity: 0.7;">{name}</em></p>
-    # """
     content = f"""
     <div style="text-align: center;">
         <a href="#" id="{api_list[nb]}">
@@ -450,18 +432,8 @@ def get_clicked_bio(api_list: list, dup_ids: dict, nb: int):
         if not peo["director"]
         else ""
     )
-
     width = 130
     height = 190
-    # content = f"""
-    #     <div style="text-align: center;">
-    #         <a href="#" id="{nb}" class="layer">
-    #             <img width="{str(width)}px" height="{str(height)}px" src="{image}"
-    #                 style="object-fit: cover; border-radius: 5%; margin-bottom: 15px;">
-    #         </a>
-    #         <p style="margin: 0;"><strong>{nom_}</strong></p>
-    #         <p style="margin: 0;"><em style="opacity: 0.7;">{character}</em></p>
-    # """
     content = f"""
         <div style="text-align: center;">
             <a href="#" id="{nb}" class="layer">
@@ -553,8 +525,6 @@ def afficher_details_film(df: pd.DataFrame, movies_ids: list):
         )
 
         for i, col in enumerate(cols):
-            # st.session_state["person_id"] = full_perso[i]["id"]
-
             with col:
                 if i < 1:
                     st.subheader(
